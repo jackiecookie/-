@@ -334,6 +334,9 @@ function request(url, callback, charset) {
 }
 
 function addOnload(node, callback, url) {
+  //是否支持load
+  //IE的 script 元素支持onreadystatechange事件，不支持onload事件。
+//FF的script 元素不支持onreadystatechange事件，只支持onload事件。
   var supportOnload = "onload" in node
 
   if (supportOnload) {
@@ -432,12 +435,17 @@ var callbackList = {}
 
 var STATUS = Module.STATUS = {
   // 1 - The `module.uri` is being fetched
+  //当前模块正在请求中
   FETCHING: 1,
   // 2 - The meta data has been saved to cachedMods
+  //已经获取到,如果用url在define方法中save,如果没有在script的onload回调中save
   SAVED: 2,
   // 3 - The `module.dependencies` are being loaded
+  //load方法,在这里还要判断他所依赖的模块的以及依赖模块可能
+  //还依赖着其他模块都已经被onload的时候才会进入第四个状态,
   LOADING: 3,
   // 4 - The module are ready to execute
+  //当前模块的所有依赖项都已经成功onload,等待执行factory
   LOADED: 4,
   // 5 - The module is being executed
   EXECUTING: 5,
@@ -562,6 +570,7 @@ Module.prototype.onload = function() {
 }
 
 // Fetch a module
+//请求模块
 Module.prototype.fetch = function(requestCache) {
   var mod = this
   var uri = mod.uri
@@ -596,6 +605,7 @@ Module.prototype.fetch = function(requestCache) {
   })
 
   if (!emitData.requested) {
+    //todo: 在IE6-9中combo请求在有缓存的情况下会出现bug？
     requestCache ?
         requestCache[emitData.requestUri] = sendRequest :
         sendRequest()
@@ -739,6 +749,7 @@ Module.define = function (id, deps, factory) {
   // Emit `define` event, used in nocache plugin, seajs node version etc
   emit("define", meta)
 
+//如果这里没有url的话只能在 script的onload回调中或者这个url的真正url在这里无法获得
   meta.uri ? Module.save(meta.uri, meta) :
       // Save information for "saving" work in the script onload event
       anonymousMeta = meta
